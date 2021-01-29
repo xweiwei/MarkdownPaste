@@ -88,7 +88,7 @@ class MarkdownPasteCommand(sublime_plugin.TextCommand):
     title = None
     try:
       webpage = urllib.request.urlopen(url, timeout=0.5).read()
-      title = str(webpage).split('<title>')[1].split('</title>')[0]
+      title = webpage.decode('utf8').split('<title>')[1].split('</title>')[0]
       if title:
         import html
         parser = html.parser.HTMLParser()
