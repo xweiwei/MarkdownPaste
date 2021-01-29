@@ -3,6 +3,7 @@ import datetime
 import subprocess
 import re
 import urllib
+import platform
 
 import sublime
 import sublime_plugin
@@ -45,33 +46,51 @@ class MarkdownPasteCommand(sublime_plugin.TextCommand):
 
     desc = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     file_name = '{}.png'.format(desc)
-    if os.name == "posix":
-      img_path = '{}/{}'.format(img_dir, file_name)
-      if img_dir_exist:
-        path = img_path
-      else:
-        path = '{}/{}'.format(edit_file_dir, file_name)
-      # os.system("pngpaste '{}'".format(path))
-      # print('save img to {}'.format(path))
-      if subprocess.call(["pngpaste", path]) != 0:
-        sublime.error_message('save png to {} error'.format(path))
+
+    img_path = '{}/{}'.format(img_dir, file_name)
+    if img_dir_exist:
+      path = img_path
+    else:
+      path = '{}/{}'.format(edit_file_dir, file_name)
+    # os.system("pngpaste '{}'".format(path))
+    print('save img to {}'.format(path))
+
+    system = platform.system()
+
+    if system == 'Darwin':
+      retcode = self.save_image_for_darwin(path)
+    elif system == 'Linux':
+      retcode = self.save_image_for_linux(path)
+    else:
+      sublime.error_message('{} unsupport save imgae'.format(system))
+
+    if retcode != 0:
+      sublime.error_message('save image to {} error'.format(path))
+      return
+
+    if not img_dir_exist:
+      os.mkdir(img_dir)
+      if not os.path.isdir(img_dir):
+        os.remove(path)
+        sublime.error_message('mkdir {} failed'.format(img_dir))
         return
 
-      if not img_dir_exist:
-        os.mkdir(img_dir)
-        if not os.path.isdir(img_dir):
-          os.remove(path)
-          sublime.error_message('mkdir {} failed'.format(img_dir))
-          return
+      os.rename(path, img_path)
 
-        os.rename(path, img_path)
+      if not os.path.exists(img_path):
+        os.removedirs(img_dir) 
+        sublime.error_message('rename {} to {} error'.fomat(path, img_path))
+        return
 
-        if not os.path.exists(img_path):
-          os.removedirs(img_dir) 
-          sublime.error_message('rename {} to {} error'.fomat(path, img_path))
-          return
-      img_path = './imgs/{}'.format(file_name)
-      self.insert_img_tag(edit, desc, img_path)
+    img_path = './imgs/{}'.format(file_name)
+    self.insert_img_tag(edit, desc, img_path)
+
+  def save_image_for_linux(self, path):
+    f = open(path, 'wb')
+    return subprocess.call(['xclip', '-selection', 'clipboard', '-t', 'image/png', '-o'], stdout=f)
+
+  def save_image_for_darwin(self, path):
+    return subprocess.call(["pngpaste", path])
 
   def insert_img_tag(self, edit, desc, img_path):
     img_tag = '![{desc}]({src})'.format(desc=desc, src=img_path)
