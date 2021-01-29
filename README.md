@@ -1,5 +1,5 @@
 # MarkdownPaste
-Sublime Text 3 plugin to paste image
+Sublime Text 3 plugin to paste image or url
 
 command + shift + v
 
